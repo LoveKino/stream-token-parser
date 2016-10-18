@@ -200,4 +200,86 @@ describe('index', () => {
             name: 'word'
         }]);
     });
+
+    it('fun', () => {
+        assert.deepEqual(map(Spliter.parse('(_01234_ _0123_ _1_', [{
+            name: 'len',
+            word: (v) => {
+                return v[0] === '_' && v[v.length - 1] === '_' && v.length < 8 && v.length > 4;
+            },
+            isPart: (v) => {
+                return v[0] === '_' && v.length < 8;
+            }
+        }, {
+            name: 'trash',
+            word: /./
+        }]), extractToken), [{
+            text: '(',
+            name: 'trash'
+        }, {
+            text: '_01234_',
+            name: 'len'
+        }, {
+            text: ' ',
+            name: 'trash'
+        }, {
+            text: '_0123_',
+            name: 'len'
+        }, {
+            text: ' ',
+            name: 'trash'
+        }, {
+            text: '_',
+            name: 'trash'
+        }, {
+            text: '1',
+            name: 'trash'
+        }, {
+            text: '_',
+            name: 'trash'
+        }]);
+    });
+
+    it('missing isPart', () => {
+        assert.deepEqual(map(Spliter.parse('a', [{
+            word: () => true
+        }, {
+            word: /./,
+            name: 'trash'
+        }]), extractToken), [{
+            text: 'a',
+            name: 'trash'
+        }]);
+    });
+
+    it('missing prefix', () => {
+        try {
+            Spliter.parse('abc(d', [{
+                word: /\w+/
+            }]);
+        } catch (err) {
+            assert.equal(err.toString().indexOf('Can not find token from prefix') !== -1, true);
+        }
+    });
+
+    it('missing word', () => {
+        assert.deepEqual(map(Spliter.parse('abc(d', [{
+            isPart: (v) => {
+                return /^[a-z]+$/.test(v);
+            },
+            name: 'word'
+        }, {
+            word: /./,
+            name: 'trash'
+        }]), extractToken)[{
+            text: 'abc',
+            name: 'word'
+        }, {
+            text: '(',
+            name: 'trash'
+        }, {
+            text: 'd',
+            name: 'trash'
+        }]);
+    });
 });

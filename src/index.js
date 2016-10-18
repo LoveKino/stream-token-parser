@@ -119,23 +119,49 @@ Parser.parse = (str, tokenTypes) => {
 
 let splitTokensToEnd = (stock, tokenTypes) => {
     let {
-        tokens, retMatrix
-    } = splitTokens(stock, tokenTypes);
-
-    if (retMatrix.length) {
-        let token = filterToken(retMatrix);
-        tokens.push(token);
-    }
-
+        tokens
+    } = splitTokens(stock, tokenTypes, 'end');
     return tokens;
 };
 
-let splitTokens = (stock, tokenTypes) => {
+let splitTokens = (stock, tokenTypes, type) => {
+    let ret;
+    let tokens = [];
+    while (stock && (ret = getToken(stock, tokenTypes, type))) {
+        let {
+            token, rest
+        } = ret;
+        stock = rest;
+
+        tokens.push(token);
+    }
+
+    return {
+        tokens,
+        rest: stock
+    };
+};
+
+/**
+ * type = 'mid' | 'end'
+ */
+let getToken = (stock, tokenTypes, type = 'mid') => {
     let next = stock;
 
     let prefix = '';
     let retMatrix = [];
-    let tokens = [];
+
+    let fetchToken = () => {
+        // empty
+        let token = filterToken(retMatrix);
+        if (!token) {
+            throw new Error(`Can not find token from prefix "${prefix}". And prefix is not any part of token. stock is "${stock}".`);
+        }
+        return {
+            token,
+            rest: stock.substring(token.text.length)
+        };
+    };
 
     while (next) {
         prefix += next[0];
@@ -146,19 +172,7 @@ let splitTokens = (stock, tokenTypes) => {
         let matchTypes = getMatchTypes(prefix, tokenTypes);
 
         if (!partTypes.length && !matchTypes.length) {
-            // empty
-            let token = filterToken(retMatrix);
-            if (!token) {
-                throw new Error(`Can not find token from prefix ${prefix}. And prefix is not any part of token.`);
-            }
-            tokens.push(token);
-
-            // update
-            prefix = '';
-            // update stock
-            stock = stock.substring(token.text.length);
-            next = stock;
-            retMatrix = [];
+            return fetchToken();
         } else {
             retMatrix.push({
                 partTypes,
@@ -168,11 +182,11 @@ let splitTokens = (stock, tokenTypes) => {
         }
     }
 
-    return {
-        tokens,
-        retMatrix,
-        rest: stock
-    };
+    if (prefix === stock && type === 'end') { // match stop point
+        return fetchToken();
+    }
+
+    return null;
 };
 
 let filterToken = (retMatrix) => {
