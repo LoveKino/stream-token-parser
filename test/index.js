@@ -271,7 +271,7 @@ describe('index', () => {
         }, {
             word: /./,
             name: 'trash'
-        }]), extractToken)[{
+        }]), extractToken), [{
             text: 'abc',
             name: 'word'
         }, {
@@ -280,6 +280,49 @@ describe('index', () => {
         }, {
             text: 'd',
             name: 'trash'
+        }]);
+    });
+
+    it('independent', () => {
+        let spliter = Spliter([{
+            word: /\w+/,
+            name: 'word'
+        }, {
+            word: /\n/,
+            name: 'linefeed',
+            independent: true
+        }]);
+
+        let rets = spliter('abc\n');
+        assert.deepEqual(map(rets, extractToken), [{
+            text: 'abc',
+            name: 'word'
+        }, {
+            text: '\n',
+            name: 'linefeed'
+        }]);
+    });
+
+    it('independent:2', () => {
+        let spliter = Spliter([{
+            word: /\w+/,
+            name: 'word'
+        }, {
+            word: /\n/,
+            name: 'linefeed',
+            independent: true
+        }]);
+
+        let rets = spliter('abc\n\ncde');
+        assert.deepEqual(map(rets, extractToken), [{
+            text: 'abc',
+            name: 'word'
+        }, {
+            text: '\n',
+            name: 'linefeed'
+        }, {
+            text: '\n',
+            name: 'linefeed'
         }]);
     });
 });

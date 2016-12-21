@@ -5,7 +5,7 @@ let {
 } = require('basetype');
 
 let {
-    map, reduce
+    map, reduce, find
 } = require('bolzano');
 
 /**
@@ -65,7 +65,7 @@ let {
 
 let Parser = funType((tokenTypes) => {
     tokenTypes = map(tokenTypes, ({
-        priority, word, isPart, name
+        priority, word, isPart, name, independent
     }) => {
         if (isString(word)) {
             isPart = stringPart(word);
@@ -81,7 +81,8 @@ let Parser = funType((tokenTypes) => {
             word,
             name: name || word.toString(),
             match: getMatch(word, isPart),
-            isPart
+            isPart,
+            independent
         };
     });
 
@@ -151,18 +152,6 @@ let getToken = (stock, tokenTypes, type = 'mid') => {
     let prefix = '';
     let retMatrix = [];
 
-    let fetchToken = () => {
-        // empty
-        let token = filterToken(retMatrix);
-        if (!token) {
-            throw new Error(`Can not find token from prefix "${prefix}". And prefix is not any part of token. stock is "${stock}".`);
-        }
-        return {
-            token,
-            rest: stock.substring(token.text.length)
-        };
-    };
-
     while (next) {
         prefix += next[0];
 
@@ -171,8 +160,24 @@ let getToken = (stock, tokenTypes, type = 'mid') => {
         let partTypes = getPartTypes(prefix, tokenTypes);
         let matchTypes = getMatchTypes(prefix, tokenTypes);
 
+        // see if there is a independent token type
+        // find independent token
+        let type = find(matchTypes, {
+            independent: true
+        }, {
+            eq: (v1, v2) => v1.independent === v2.independent
+        });
+        if (type) {
+            return splitTokenRet(
+                assembleToken(type, prefix),
+                stock
+            );
+        }
+
+        // obey longest match rule
+        // no matchs futher, means look forward more won't get any matchs
         if (!partTypes.length && !matchTypes.length) {
-            return fetchToken();
+            return fetchToken(stock, retMatrix, prefix);
         } else {
             retMatrix.push({
                 partTypes,
@@ -182,11 +187,35 @@ let getToken = (stock, tokenTypes, type = 'mid') => {
         }
     }
 
+    // if this is end, fetchToken
     if (prefix === stock && type === 'end') { // match stop point
-        return fetchToken();
+        return fetchToken(stock, retMatrix, prefix);
     }
 
     return null;
+};
+
+let fetchToken = (stock, retMatrix, prefix) => {
+    // empty
+    let token = filterToken(retMatrix);
+    if (!token) {
+        throw new Error(`Can not find token from prefix "${prefix}". And prefix is not any part of token. stock is "${stock}".`);
+    }
+    return splitTokenRet(token, stock);
+};
+
+let splitTokenRet = (token, stock) => {
+    return {
+        token,
+        rest: stock.substring(token.text.length)
+    };
+};
+
+let assembleToken = (tokenType, prefix) => {
+    return {
+        tokenType,
+        text: prefix
+    };
 };
 
 let filterToken = (retMatrix) => {
@@ -199,10 +228,7 @@ let filterToken = (retMatrix) => {
                 tokenType.priority > pre.tokenType.priority ||
                 // longest matching rule
                 (tokenType.priority === pre.tokenType.priority && pre.text.length < prefix.length)) {
-                return {
-                    tokenType,
-                    text: prefix
-                };
+                return assembleToken(tokenType, prefix);
             } else {
                 return pre;
             }
