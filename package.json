@@ -1,6 +1,6 @@
 {
   "name": "stream-token-parser",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Token parser based on stream. Accept chunk and parse it into tokens simultaneously.",
   "main": "index.js",
   "scripts": {
