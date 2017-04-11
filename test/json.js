@@ -1,6 +1,8 @@
 'use strict';
 
-let Spliter = require('..');
+let {
+    parser, MATCH, WAIT, QUIT
+} = require('..');
 
 let extractToken = (token) => {
     return {
@@ -11,15 +13,20 @@ let extractToken = (token) => {
 
 describe('json', () => {
     it('string', () => {
-        console.log(Spliter.parse('{"a": 1, "b": "a"}', [{
+        console.log(parser.parse('{"a": 1, "b": "a"}', [{
             priority: 1,
-            word: /"(([^"\\])|(\\["\\/bfnrt])|(\\u[0-9A-Fa-f]{4}))*"/,
-            isPart: (prefix) => {},
+            match: (prefix) => {
+                // TODO
+                if (/"(([^"\\])|(\\["\\/bfnrt])|(\\u[0-9A-Fa-f]{4}))*"/.test(prefix)) return MATCH;
+                return WAIT;
+            },
             name: 'string'
         }, {
             priority: 0,
-            word: /./,
-            isPart: /./,
+            match: (prefix) => {
+                if(/^.$/.test(prefix)) return MATCH;
+                return QUIT;
+            },
             name: 'trash'
         }]).map(extractToken));
     });

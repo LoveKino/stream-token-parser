@@ -18,8 +18,7 @@ let {
 
 let {
     findToken,
-    filterTypes,
-    findIndependentTokenType
+    filterTypes
 } = require('./findToken');
 
 /**
@@ -192,15 +191,14 @@ let getToken = (stock, tokenTypes, type = 'mid') => {
 
         // shorten next
         next = next.substring(1);
-        let [partTypes, matchTypes] = filterTypes(prefix, tokenTypes);
+        let [partTypes, matchTypes, independentType] = filterTypes(prefix, tokenTypes);
 
         // see if there is a independent token type
         // find independent token
-        let type = findIndependentTokenType(matchTypes);
 
-        if (type) {
+        if (independentType) {
             return splitTokenRet(
-                assembleToken(type, prefix),
+                assembleToken(independentType, prefix),
                 stock
             );
         }
