@@ -1,38 +1,62 @@
 'use strict';
 
 let {
-    isString, funType, listType, isFunction, mapType, isFalsy, isNumber, or, isRegExp
+    isString, funType, listType, isFunction, mapType, isFalsy, isNumber, or
 } = require('basetype');
 
 let {
-    map, reduce, find
+    WAIT, MATCH, QUIT
+} = require('./const');
+
+let {
+    map
 } = require('bolzano');
+
+let {
+    getMatch
+} = require('./match');
+
+let {
+    findToken,
+    filterTypes,
+    findIndependentTokenType
+} = require('./findToken');
 
 /**
  *
- * Token spliter used to split stream.
+ * A token spliter used to split stream string.
  *
  * When accept a chunk, parsing it at the same time.
  *
+ * ## options
  *
  * tokenTypes = [
  *  {
  *      name,
  *      priority,
- *      word, // string || regular expression || function
- *      isPart // only works when word's type is regular expression or function
+ *      match
  *  }
  * ]
  *
- * 1. priority
+ * - priority
+ *
+ *    When meets ambiguity, priority will be helpful.
+ *
  *    Assume we got two types: \w*, \s. When split "today is a good day". If we set \s has a higher priority, we will get ["t", "o", "d", "a", "y", " ", "i", "s", " ", "a", " ", "g", "o", "o", "d", " ", "d", "a", "y"], just one token. If we set \w* has a higher priority, we will get ["today", " ", "is", " ", "a", " ", "good", " ", "day"].
  *
- * 2. isPart string -> boolean
+ * - match (letter, prefix) -> WAIT | MATCH | QUIT
+ *
  *     Because we are handling chunks, we need to know finished a chunk or not.
  *
+ * ## rules
  *
- * eg: four rules a(def, 1), b(default[s?], 2), c(\w\w+, 0), d(_, 2)
+ * - priority rule
  *
+ * - longest matching
+ *
+ * eg: four rules a(def, 1), b(default[s?], 2), c(/\w\w+/, 0), d(_, 2)
+ *
+ * ```
  * input     isPart     match
  * d         (a, b, c)  ()
  * de        (a, b, c)  (c:0)
@@ -43,9 +67,11 @@ let {
  * default   (b, c)     (b:2, c:0)
  * defaults  (b, c)     (b:2, c:0)
  * defaults_ ()         ()
+ * ```
  *
- * empty happend, analysis process.
+ * When empty situation happend, analysis the process.
  *
+ * ```
  * 1. possible situations
  *    de        (a, b, c)  (c:0)
  *    def       (a, b, c)  (a:1, c:0)
@@ -61,27 +87,27 @@ let {
  *
  * 3. chose the highest priority rule. (priority rule)
  *    defaults (b:2)
+ * ```
  */
 
-let Parser = funType((tokenTypes) => {
-    tokenTypes = map(tokenTypes, ({
-        priority, word, isPart, name, independent
-    }) => {
-        if (isString(word)) {
-            isPart = stringPart(word);
-        }
-        if (isRegExp(word) && !isPart) {
-            isPart = execReg(word);
-        }
+let parser = funType((tokenTypes) => {
+    tokenTypes = map(tokenTypes, (tokenType) => {
+        let {
+            priority, name, independent, match
+        } = tokenType;
 
-        isPart = isPart || isFalsy;
+        name = name || (match && match.toString());
+
+        match = getMatch(match);
+
+        if (!isFunction(match)) {
+            throw new Error(`Error match in token type ${strTokenType(tokenType)}`);
+        }
 
         return {
             priority: priority || 0,
-            word,
-            name: name || word.toString(),
-            match: getMatch(word, isPart),
-            isPart,
+            name: name,
+            match,
             independent
         };
     });
@@ -107,15 +133,24 @@ let Parser = funType((tokenTypes) => {
 }, [
     listType(mapType({
         priority: or(isFalsy, isNumber),
-        word: or(isString, isFunction, isRegExp, isFalsy),
-        isPart: or(isFalsy, isFunction),
         name: or(isFalsy, isString)
     }))
 ]);
 
-Parser.parse = (str, tokenTypes) => {
-    let parser = Parser(tokenTypes);
-    return parser(str).concat(parser(null));
+let strTokenType = ({
+    priority, match, name, independent
+}) => {
+    return `{
+        priority: ${priority},
+        match: ${match},
+        name: ${name},
+        independent: ${independent}
+    }`;
+};
+
+parser.parse = (str, tokenTypes) => {
+    let parse = parser(tokenTypes);
+    return parse(str).concat(parse(null));
 };
 
 let splitTokensToEnd = (stock, tokenTypes) => {
@@ -157,16 +192,12 @@ let getToken = (stock, tokenTypes, type = 'mid') => {
 
         // shorten next
         next = next.substring(1);
-        let partTypes = getPartTypes(prefix, tokenTypes);
-        let matchTypes = getMatchTypes(prefix, tokenTypes);
+        let [partTypes, matchTypes] = filterTypes(prefix, tokenTypes);
 
         // see if there is a independent token type
         // find independent token
-        let type = find(matchTypes, {
-            independent: true
-        }, {
-            eq: (v1, v2) => v1.independent === v2.independent
-        });
+        let type = findIndependentTokenType(matchTypes);
+
         if (type) {
             return splitTokenRet(
                 assembleToken(type, prefix),
@@ -197,7 +228,7 @@ let getToken = (stock, tokenTypes, type = 'mid') => {
 
 let fetchToken = (stock, retMatrix, prefix) => {
     // empty
-    let token = filterToken(retMatrix);
+    let token = findToken(retMatrix);
     if (!token) {
         throw new Error(`Can not find token from prefix "${prefix}". And prefix is not any part of token. stock is "${stock}".`);
     }
@@ -218,64 +249,6 @@ let assembleToken = (tokenType, prefix) => {
     };
 };
 
-let filterToken = (retMatrix) => {
-    return reduce(retMatrix, (prev, {
-        prefix, matchTypes
-    }) => {
-        return reduce(matchTypes, (pre, tokenType) => {
-            if (!prev ||
-                // priority rule
-                tokenType.priority > pre.tokenType.priority ||
-                // longest matching rule
-                (tokenType.priority === pre.tokenType.priority && pre.text.length < prefix.length)) {
-                return assembleToken(tokenType, prefix);
-            } else {
-                return pre;
-            }
-        }, prev);
-    }, null);
+module.exports = {
+    parser, WAIT, QUIT, MATCH
 };
-
-let getMatchTypes = (prefix, tokenTypes) => {
-    return reduce(tokenTypes, (prev, tokenType) => {
-        if (tokenType.match(prefix)) {
-            prev.push(tokenType);
-        }
-        return prev;
-    }, []);
-};
-
-let getPartTypes = (prefix, tokenTypes) => {
-    return reduce(tokenTypes, (prev, tokenType) => {
-        if (tokenType.isPart(prefix)) {
-            prev.push(tokenType);
-        }
-        return prev;
-    }, []);
-};
-
-let stringPart = (word) => (v) => word.indexOf(v) !== -1;
-
-let getMatch = (word, isPart) => {
-    let matchFun = null;
-    if (isFunction(word)) matchFun = word;
-    if (isString(word)) matchFun = (v) => v === word;
-    if (isRegExp(word)) matchFun = execReg(word);
-
-    return (v) => {
-        if (!isPart(v)) {
-            return false;
-        }
-        if (matchFun) return matchFun(v);
-        return true;
-    };
-};
-
-let execReg = (reg) => (v) => {
-    let ret = reg.exec(v);
-    if (!ret) return false;
-    if (ret[0] !== v) return false;
-    return true;
-};
-
-module.exports = Parser;

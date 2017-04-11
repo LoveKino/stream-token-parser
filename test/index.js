@@ -1,6 +1,8 @@
 'use strict';
 
-let Spliter = require('..');
+let {
+    parser, WAIT, QUIT, MATCH
+} = require('..');
 
 let {
     map
@@ -16,13 +18,19 @@ let extractToken = (token) => {
 
 describe('index', () => {
     it('base', () => {
-        let spliter = Spliter([{
+        let spliter = parser([{
             priority: 1,
-            word: /\w*/,
+            match: (prefix) => {
+                if (/^\w*$/.test(prefix)) return MATCH;
+                return QUIT;
+            },
             name: 'word'
         }, {
             priority: 0,
-            word: /./,
+            match: (prefix) => {
+                if (/^.$/.test(prefix)) return MATCH;
+                return QUIT;
+            },
             name: 'trash'
         }]);
 
@@ -66,15 +74,19 @@ describe('index', () => {
     });
 
     it('priority', () => {
-        assert.deepEqual(map(Spliter.parse('default_', [{
+        assert.deepEqual(map(parser.parse('default_', [{
             priority: 10,
-            word: 'def'
+            match: 'def',
+            name: 'def'
         }, {
             priority: 8,
-            word: 'default'
+            match: 'default'
         }, {
             priority: 0,
-            word: /./,
+            match: (prefix) => {
+                if (/^.$/.test(prefix)) return MATCH;
+                return QUIT;
+            },
             name: 'trash'
         }]), extractToken), [{
             text: 'def',
@@ -96,15 +108,18 @@ describe('index', () => {
             name: 'trash'
         }]);
 
-        assert.deepEqual(map(Spliter.parse('default_', [{
+        assert.deepEqual(map(parser.parse('default_', [{
             priority: 4,
-            word: 'def'
+            match: 'def'
         }, {
             priority: 8,
-            word: 'default'
+            match: 'default'
         }, {
             priority: 0,
-            word: /./,
+            match: (prefix) => {
+                if (/^.$/.test(prefix)) return MATCH;
+                return QUIT;
+            },
             name: 'trash'
         }]), extractToken), [{
             text: 'default',
@@ -116,11 +131,14 @@ describe('index', () => {
     });
 
     it('longest match rule', () => {
-        assert.deepEqual(map(Spliter.parse('todayisagoodday', [{
-            word: /\w+/,
+        assert.deepEqual(map(parser.parse('todayisagoodday', [{
+            match: (prefix) => {
+                if (/^\w+$/.test(prefix)) return MATCH;
+                return QUIT;
+            },
             name: 'any word'
         }, {
-            word: 'today'
+            match: 'today'
         }]), extractToken), [{
             text: 'todayisagoodday',
             name: 'any word'
@@ -128,23 +146,32 @@ describe('index', () => {
     });
 
     it('closing tag', () => {
-        assert.deepEqual(map(Spliter.parse('<html>e<body></body></html>', [{
+        assert.deepEqual(map(parser.parse('<html>e<body></body></html>', [{
             name: 'start',
-            word: /<.*>/,
+
+            match: (v) => {
+                if (/^<[^/][^>]*$/.test(v)) return WAIT;
+                if (/^<[^/].*>$/.test(v)) return MATCH;
+                return QUIT;
+            },
+
             priority: 10,
-            isPart: (v) => {
-                return v.indexOf('<') === 0 && (v.indexOf('>') === -1 || v.indexOf('>') === v.length - 1) && v.indexOf('</') !== 0;
-            }
         }, {
             name: 'end',
-            word: /<\/.*>/,
             priority: 10,
-            isPart: (v) => {
-                return v.indexOf('</') === 0 && (v.indexOf('>') === -1 || v.indexOf('>') === v.length - 1);
+            match: (v) => {
+                if (/^<\/[^>]*$/.test(v)) return WAIT;
+                if (/^<\/.*>$/.test(v)) return MATCH;
+                return QUIT;
             }
         }, {
             name: 'trash',
-            word: /./,
+            match: (v) => {
+                if (/^.$/.test(v)) {
+                    return MATCH;
+                }
+                return QUIT;
+            },
             priority: 0
         }]), extractToken), [{
             text: '<html>',
@@ -165,11 +192,17 @@ describe('index', () => {
     });
 
     it('simple sentence', () => {
-        assert.deepEqual(map(Spliter.parse('today is a good day', [{
-            word: /\w+/,
+        assert.deepEqual(map(parser.parse('today is a good day', [{
+            match: (v) => {
+                if (/^\w+$/.test(v)) return MATCH;
+                return QUIT;
+            },
             name: 'word'
         }, {
-            word: /\s+/,
+            match: (v) => {
+                if (/^\s+$/.test(v)) return MATCH;
+                return QUIT;
+            },
             name: 'space'
         }]), extractToken), [{
             text: 'today',
@@ -202,17 +235,20 @@ describe('index', () => {
     });
 
     it('fun', () => {
-        assert.deepEqual(map(Spliter.parse('(_01234_ _0123_ _1_', [{
+        assert.deepEqual(map(parser.parse('(_01234_ _0123_ _1_', [{
             name: 'len',
-            word: (v) => {
-                return v[0] === '_' && v[v.length - 1] === '_' && v.length < 8 && v.length > 4;
-            },
-            isPart: (v) => {
-                return v[0] === '_' && v.length < 8;
+            match: (v) => {
+                if (v[0] === '_' && v.length < 8 && v[v.length - 1] !== '_') return WAIT;
+
+                if (v[0] === '_' && v[v.length - 1] === '_' && v.length < 8 && v.length > 4) return MATCH;
+                return QUIT;
             }
         }, {
             name: 'trash',
-            word: /./
+            match: (v) => {
+                if (/^.$/.test(v)) return MATCH;
+                return QUIT;
+            }
         }]), extractToken), [{
             text: '(',
             name: 'trash'
@@ -240,22 +276,22 @@ describe('index', () => {
         }]);
     });
 
-    it('missing isPart', () => {
-        assert.deepEqual(map(Spliter.parse('a', [{
-            word: () => true
-        }, {
-            word: /./,
-            name: 'trash'
-        }]), extractToken), [{
-            text: 'a',
-            name: 'trash'
-        }]);
+    it('missing match', (done) => {
+        try {
+            parser.parse('a', [{}]);
+        } catch (err) {
+            assert.equal(err.toString().indexOf('Error match in token type') !== -1, true);
+            done();
+        }
     });
 
     it('missing prefix', () => {
         try {
-            Spliter.parse('abc(d', [{
-                word: /\w+/
+            parser.parse('abc(d', [{
+                match: (v) => {
+                    if (/\w+/.test(v)) return MATCH;
+                    return QUIT;
+                }
             }]);
         } catch (err) {
             assert.equal(err.toString().indexOf('Can not find token from prefix') !== -1, true);
@@ -263,13 +299,17 @@ describe('index', () => {
     });
 
     it('missing word', () => {
-        assert.deepEqual(map(Spliter.parse('abc(d', [{
-            isPart: (v) => {
-                return /^[a-z]+$/.test(v);
+        assert.deepEqual(map(parser.parse('abc(d', [{
+            match: (v) => {
+                if (/^[a-z]+$/.test(v)) return MATCH;
+                return QUIT;
             },
             name: 'word'
         }, {
-            word: /./,
+            match: (v) => {
+                if (/^.$/.test(v)) return MATCH;
+                return QUIT;
+            },
             name: 'trash'
         }]), extractToken), [{
             text: 'abc',
@@ -279,16 +319,22 @@ describe('index', () => {
             name: 'trash'
         }, {
             text: 'd',
-            name: 'trash'
+            name: 'word'
         }]);
     });
 
     it('independent', () => {
-        let spliter = Spliter([{
-            word: /\w+/,
+        let spliter = parser([{
+            match: (v) => {
+                if (/^\w+$/.test(v)) return MATCH;
+                return QUIT;
+            },
             name: 'word'
         }, {
-            word: /\n/,
+            match: (v) => {
+                if (/^\n$/.test(v)) return MATCH;
+                return QUIT;
+            },
             name: 'linefeed',
             independent: true
         }]);
@@ -304,11 +350,19 @@ describe('index', () => {
     });
 
     it('independent:2', () => {
-        let spliter = Spliter([{
-            word: /\w+/,
+        let spliter = parser([{
+            match: (v) => {
+                if (/^\w+$/.test(v)) return MATCH;
+                return QUIT;
+            },
+
             name: 'word'
         }, {
-            word: /\n/,
+            match: (v) => {
+                if (/^\n$/.test(v)) return MATCH;
+                return QUIT;
+            },
+
             name: 'linefeed',
             independent: true
         }]);
