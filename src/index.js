@@ -9,6 +9,12 @@ let {
 } = require('./const');
 
 let {
+    stateGraphDSL
+} = require('./fsm');
+
+let buildFSM = require('./buildFSM');
+
+let {
     map
 } = require('bolzano');
 
@@ -81,10 +87,10 @@ let {
  *    defaults  (b, c)     (b:2, c:0)
  *
  * 2. for any rule (a, b, c) only consider it's biggest matching situation. (longest matching rule)
- *    def       (a, b, c)  (a:1)
- *    defaults  (b, c)     (b:2, c:0)
+ *    def       (a, b, c)  (a:1)            longest for a
+ *    defaults  (b, c)     (b:2, c:0)       longest for b and c
  *
- * 3. chose the highest priority rule. (priority rule)
+ * 3. choose the highest priority rule. (priority rule)
  *    defaults (b:2)
  * ```
  */
@@ -179,19 +185,26 @@ let splitTokens = (stock, tokenTypes, type) => {
 
 /**
  * type = 'mid' | 'end'
+ *
+ * get toke from stock based on tokenTypes
  */
 let getToken = (stock, tokenTypes, type = 'mid') => {
     let next = stock;
 
-    let prefix = '';
+    let prefix = ''; // used to store current prefix
     let retMatrix = [];
 
+    let restTypes = tokenTypes;
+
     while (next) {
-        prefix += next[0];
+        let nextLetter = next[0];
+        prefix += nextLetter;
 
         // shorten next
         next = next.substring(1);
-        let [partTypes, matchTypes, independentType] = filterTypes(prefix, tokenTypes);
+        let [partTypes, matchTypes, independentType] = filterTypes(nextLetter, prefix, restTypes);
+
+        restTypes = partTypes; // reduce types
 
         // see if there is a independent token type
         // find independent token
@@ -248,5 +261,5 @@ let assembleToken = (tokenType, prefix) => {
 };
 
 module.exports = {
-    parser, WAIT, QUIT, MATCH
+    parser, WAIT, QUIT, MATCH, stateGraphDSL, buildFSM
 };

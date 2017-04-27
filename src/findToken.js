@@ -4,19 +4,23 @@ let {
     WAIT, MATCH
 } = require('./const');
 
-let filterTypes = (prefix, tokenTypes) => {
+let filterTypes = (nextLetter, prefix, tokenTypes) => {
     let parts = [],
         matchs = [],
         independentType = null;
-    for (let i = 0; i < tokenTypes.length; i++) {
+
+    let len = tokenTypes.length;
+
+    for (let i = 0; i < len; i++) {
         let tokenType = tokenTypes[i];
-        let ret = tokenType.match(prefix);
+        let ret = tokenType.match(prefix, nextLetter);
+
         if (ret === WAIT) {
             parts.push(tokenType);
         } else if (ret === MATCH) { // matched
             matchs.push(tokenType);
             parts.push(tokenType);
-            if(!independentType && tokenType.independent) {
+            if (!independentType && tokenType.independent) {
                 independentType = tokenType;
             }
         }

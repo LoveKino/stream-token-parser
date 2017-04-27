@@ -150,6 +150,7 @@ describe('index', () => {
             name: 'start',
 
             match: (v) => {
+                if (v === '<') return WAIT;
                 if (/^<[^/][^>]*$/.test(v)) return WAIT;
                 if (/^<[^/].*>$/.test(v)) return MATCH;
                 return QUIT;
@@ -160,6 +161,7 @@ describe('index', () => {
             name: 'end',
             priority: 10,
             match: (v) => {
+                if (v === '<') return WAIT;
                 if (/^<\/[^>]*$/.test(v)) return WAIT;
                 if (/^<\/.*>$/.test(v)) return MATCH;
                 return QUIT;
@@ -238,8 +240,8 @@ describe('index', () => {
         assert.deepEqual(map(parser.parse('(_01234_ _0123_ _1_', [{
             name: 'len',
             match: (v) => {
+                if (v === '_') return WAIT;
                 if (v[0] === '_' && v.length < 8 && v[v.length - 1] !== '_') return WAIT;
-
                 if (v[0] === '_' && v[v.length - 1] === '_' && v.length < 8 && v.length > 4) return MATCH;
                 return QUIT;
             }
