@@ -10,7 +10,7 @@ let {
 
 let {
     stateGraphDSL
-} = require('./fsm');
+} = require('cl-fsm');
 
 let buildFSM = require('./buildFSM');
 

@@ -4,7 +4,7 @@ const START_STATE = '__start__state__';
 
 let {
     stateGraphDSL, DFA
-} = require('./fsm');
+} = require('cl-fsm');
 
 /**
  * build a fda to do the matching work
