@@ -381,4 +381,30 @@ describe('index', () => {
             name: 'linefeed'
         }]);
     });
+
+    it('error', (done) => {
+        let spliter = parser([{
+            match: (v) => {
+                if (/^\w+$/.test(v)) return MATCH;
+                return QUIT;
+            },
+
+            name: 'word'
+        }, {
+            match: (v) => {
+                if (/^\n$/.test(v)) return MATCH;
+                return QUIT;
+            },
+
+            name: 'linefeed',
+            independent: true
+        }]);
+
+        try {
+            spliter('abc\t\n\ncde');
+        } catch (err) {
+            assert.equal(err.toString().indexOf('Can not find token from prefix "\t"') !== -1, true);
+            done();
+        }
+    });
 });
