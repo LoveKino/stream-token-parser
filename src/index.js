@@ -27,6 +27,10 @@ let {
     filterTypes
 } = require('./findToken');
 
+let {
+    assembleToken
+} = require('./util');
+
 /**
  *
  * A token spliter used to split stream string.
@@ -250,13 +254,6 @@ let splitTokenRet = (token, stock) => {
     return {
         token,
         rest: stock.substring(token.text.length)
-    };
-};
-
-let assembleToken = (tokenType, prefix) => {
-    return {
-        tokenType,
-        text: prefix
     };
 };
 

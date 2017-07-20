@@ -4,6 +4,10 @@ let {
     WAIT, MATCH
 } = require('./const');
 
+let {
+    assembleToken
+} = require('./util');
+
 let filterTypes = (nextLetter, prefix, tokenTypes) => {
     let parts = [],
         matchs = [],
@@ -43,10 +47,7 @@ let findToken = (retMatrix) => {
                 tokenType.priority > prev.tokenType.priority ||
                 (tokenType.priority === prev.tokenType.priority && prefix.length > prev.text.length)
             ) {
-                prev = {
-                    tokenType,
-                    text: prefix
-                };
+                prev = assembleToken(tokenType, prefix);
             }
         }
     }

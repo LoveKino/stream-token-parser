@@ -12,7 +12,7 @@ let assert = require('assert');
 let extractToken = (token) => {
     return {
         text: token.text,
-        name: token.tokenType.name
+        name: token.name
     };
 };
 

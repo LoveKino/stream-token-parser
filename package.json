@@ -1,6 +1,6 @@
 {
   "name": "stream-token-parser",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Token parser designed based on stream property. Accept chunk string and parse it into tokens simultaneously.\n[readme-lang:zh]基于流特性设计的token解析器，接受一个chunk的字符串，同时解析成tokens。",
   "main": "index.js",
   "scripts": {
