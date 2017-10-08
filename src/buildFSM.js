@@ -1,33 +1,39 @@
 'use strict';
 
-const START_STATE = '__start__state__';
+let {
+    RegularExp
+} = require('cl-fsm');
 
 let {
-    stateGraphDSL, DFA
-} = require('cl-fsm');
+    WAIT,
+    QUIT,
+    MATCH
+} = require('./const');
 
 /**
  * build a fda to do the matching work
  *
  * transit: (currentState, letter) -> nextState
  */
-module.exports = (stateMap, accepts) => {
-    let m = null;
+module.exports = (regularExpStr) => {
+    let regExp = new RegularExp(regularExpStr);
 
-    // parse stateMap
-    let {
-        transitions, acceptStateMap
-    } = stateGraphDSL.transitionMaper(
-        stateGraphDSL.g(START_STATE,
-            stateGraphDSL.c(null, stateMap)),
-        accepts);
+    let state = -1;
 
     return (prefix, letter) => {
         if (prefix.length === 1) {
-            m = new DFA(transitions, acceptStateMap);
-            return m.transit(letter).type;
+            state = regExp.getStartState();
+        }
+
+        let nextState = regExp.transit(state, letter);
+        if (regExp.isEndState(nextState)) {
+            state = nextState;
+            return MATCH;
+        } else if (regExp.isErrorState(nextState)) {
+            return QUIT;
         } else {
-            return m.transit(letter).type;
+            state = nextState;
+            return WAIT;
         }
     };
 };

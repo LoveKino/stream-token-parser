@@ -73,24 +73,28 @@ output
            name: 'word',
            match: [Function: match],
            independent: undefined },
+        name: 'word',
         text: 'today' },
       { tokenType: 
          { priority: 0,
            name: 'trash',
            match: [Function: match],
            independent: undefined },
+        name: 'trash',
         text: '=' },
       { tokenType: 
          { priority: 1,
            name: 'word',
            match: [Function: match],
            independent: undefined },
+        name: 'word',
         text: 'is' },
       { tokenType: 
          { priority: 0,
            name: 'trash',
            match: [Function: match],
            independent: undefined },
+        name: 'trash',
         text: ' ' } ]
     
     
@@ -99,24 +103,28 @@ output
            name: 'word',
            match: [Function: match],
            independent: undefined },
+        name: 'word',
         text: '__a' },
       { tokenType: 
          { priority: 0,
            name: 'trash',
            match: [Function: match],
            independent: undefined },
+        name: 'trash',
         text: ' ' },
       { tokenType: 
          { priority: 1,
            name: 'word',
            match: [Function: match],
            independent: undefined },
+        name: 'word',
         text: 'good' },
       { tokenType: 
          { priority: 0,
            name: 'trash',
            match: [Function: match],
            independent: undefined },
+        name: 'trash',
         text: ' ' } ]
     
     
@@ -125,6 +133,7 @@ output
            name: 'word',
            match: [Function: match],
            independent: undefined },
+        name: 'word',
         text: 'day' } ]
 
 ```
@@ -141,34 +150,24 @@ output
 │──README_zh.md    
 │──apply    
 │   └──jsonTokenTypes.js    
-│──bin    
-│──coverage    
-│   │──coverage.json    
-│   │──lcov-report    
-│   │   │──base.css    
-│   │   │──index.html    
-│   │   │──prettify.css    
-│   │   │──prettify.js    
-│   │   │──sort-arrow-sprite.png    
-│   │   │──sorter.js    
-│   │   └──stream-token-parser    
-│   │       │──apply    
-│   │       │   │──index.html    
-│   │       │   └──jsonTokenTypes.js.html    
-│   │       │──index.html    
-│   │       └──index.js.html    
-│   └──lcov.info    
 │──example    
-│   └──mess    
-│       └──index.js    
+│   │──mess    
+│   │   └──index.js    
+│   └──stream    
+│       │──index.js    
+│       └──text.txt    
 │──index.js    
 │──package.json    
-└──src    
-    │──buildFSM.js    
-    │──const.js    
-    │──findToken.js    
+│──src    
+│   │──buildFSM.js    
+│   │──const.js    
+│   │──findToken.js    
+│   │──index.js    
+│   │──match.js    
+│   └──util.js    
+└──test    
     │──index.js    
-    └──match.js     
+    └──json.js     
 ```
 
 
