@@ -32,6 +32,6 @@
   "dependencies": {
     "basetype": "^0.1.4",
     "bolzano": "0.0.1",
-    "cl-fsm": "0.0.3"
+    "cl-fsm": "0.0.4"
   }
 }
